@@ -1,0 +1,115 @@
+#!/bin/bash
+
+# git-discard-whitespace ver 0.9.0
+#   by Steven Elliott <selliott512@gmail.com>
+#
+# Discards whitespace changes in the working tree.  This script can be used
+# to undo unintentional whitespace changes that were made.  Doing so before
+# checking in avoids extraneous whitespace changes.  In the interest of safety
+# both a diff and stash commit object of the files are created before they are
+# altered.  If the attempt to remove the whitespace changes fails the original
+# files are restored.
+#
+# Examples:
+#  Discard all whitespace in the current directory:
+#    git-discard-whitespace
+#  Discard all whitespace in a particular subdirectory (subdir) with verbose
+#  output (-v):
+#    git-discard-whitespace -v subdir
+#
+# Inspired by:
+#   http://stackoverflow.com/questions/3515597/git-add-only-non-whitespace-changes
+
+function cleanup()
+{
+    local ecode=$?
+    if [[ -n $do_verbose ]]
+    then
+        echo "Clean up.  Exit code will be $ecode."
+    fi
+    if [[ $ecode -eq 0 ]]
+    then
+        rm -f "$tmp_diff"
+    else
+        echo "Failed to discard whitespace changes." 1>&2
+        if [[ -n $stash ]]
+        then
+            echo "Applying stash SHA-1 \"$stash\" to recover the initial working files."
+            git stash apply "$stash"
+        fi
+        echo "The working files should be restored, but examine them as well \
+as the stash SHA-1 mentioned above, if any.  Also consult the diff file \
+\"$tmp_diff\"."
+    fi
+}
+
+bname="${0##*/}"
+tmp_diff="/tmp/$bname.$$.diff"
+
+# Unset variables that may be referenced later.
+unset do_verbose stash
+
+if [[ $1 == -v ]]
+then
+    do_verbose=true
+    shift
+fi
+
+if [[ $# == 0 ]]
+then
+    # If no arguments then apply to the current directory.
+    set .
+fi
+
+for item in "$@"
+do
+    # git apply does not seem to work right in these cases.
+    if [[ $item == ..* ]]
+    then
+        echo "\"..\" in paths such as \"$item\" are not allowed." 1>&2
+        exit 1
+    fi
+    if [[ $item == /* ]]
+    then
+        echo "Absolute paths such as \"$item\" are not allowed." 1>&2
+        exit 1
+    fi
+done
+
+# Abort if any errors.
+set -e
+
+# Generate the diff without whitespace.
+if [[ -n $do_verbose ]]
+then
+    echo "Generating the diff in \"$tmp_diff\"."
+fi
+git diff -w --no-color "$@" > "$tmp_diff"
+trap cleanup EXIT
+
+# Create a stash object of the files first.  This won't be used unless
+# something goes wrong.  It will eventually be deleted by the garbage 
+# collector.
+if [[ -n $do_verbose ]]
+then
+    echo "Creating the stash."
+fi
+stash=$(git stash create)
+
+# Revert the file(s) then patch ignoring whitespace.
+git checkout "$@"
+if [[ -s $tmp_diff ]]
+then
+    # There are non-whitespace changes.
+    if [[ -n $do_verbose ]]
+    then
+        echo "Applying diff \"$tmp_diff\"."
+    fi
+    # Consider adding --whitespace=fix to the following.
+    git apply --ignore-whitespace < "$tmp_diff"
+else
+    if [[ -n $do_verbose ]]
+    then
+        echo "No changes in diff \"$tmp_diff\"."
+    fi
+fi

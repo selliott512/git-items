@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# git-graph ver 0.9.0
+#   by Steven Elliott <selliott512@gmail.com>
+#
+# A wrapper for
+#   git log --graph
+# with options to alter the output in various ways.  The output is sent
+# to less.
+#
+# Examples:
+#   Display the output unchanged:
+#     git-graph
+#   Display the output one line (-o) and topological order (-t):
+#     git-graph -ot
+
+# Globals
+bname=${0##*/}
+# max_line_length=$(( $(tput cols) + 15 ))
+max_sha1_chars=10
+
+# Functions
+function usage()
+{
+    echo "Usage: $bname [-d|-f|-o|-t [...]]"
+}
+
+unset log_args
+while getopts "hdfot" opt
+do
+    case $opt in
+        h)
+            usage
+            exit
+            ;;
+        d)
+            log_args="$log_args --date-order"
+            ;;
+        f)
+            log_args="$log_args --pretty=fuller"
+            ;;
+        o)
+            log_args="$log_args --pretty=oneline"
+            ;;
+        t)
+            log_args="$log_args --topo-order"
+            ;;
+    esac
+done
+shift $(($OPTIND - 1))
+
+cur_branch=$(git rev-parse --abbrev-ref HEAD)
+git log --color --graph $log_args "$@" | \
+    git name-rev --refs=refs/heads/$cur_branch --stdin | \
+    sed "s/\([0-9A-Fa-f]\{$max_sha1_chars\}\)[0-9A-Fa-f]*\b/\1/g" | \
+    # This illustrates how long lines could be reduced with cut, but it does
+    # not work well with colors.
+    # cut -c -$max_line_length | \
+    less -RS

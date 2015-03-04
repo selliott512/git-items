@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# git-gc-all ver 0.9.0
+#   by Sam Watkins
+#
+# Aggressively garbage collect unreferenced objects.  Caution, this deletes
+# objects that are normally not deleted by "git gc", such as objects referenced
+# by the reflog.
+#
+# Examples:
+#  Garbage collect objects in the current repository:
+#    git-gc-all
+#
+# Copied from:
+#   http://stackoverflow.com/questions/1904860/how-to-remove-unreferenced-blobs-from-my-git-repo
+
+git -c gc.reflogExpire=0 -c gc.reflogExpireUnreachable=0 -c gc.rerereresolved=0 \
+    -c gc.rerereunresolved=0 -c gc.pruneExpire=now gc "$@"

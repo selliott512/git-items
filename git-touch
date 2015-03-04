@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# git-touch ver 0.9.0
+#   by Steven Elliott <selliott512@gmail.com>
+#
+# Sets both the author and commit timestamps for the commit at HEAD.  By
+# default the timestamps are set to the current time.  If a date is specified
+# the author time is set to that date whereas the commit timestamp is sill set
+# to the current time.  The commit time should never be set back in time
+# anyway.
+#
+# Examples:
+#   Set both timestamps to the current date:
+#     git-touch
+#   Set the author timestamps to a particular date and the commit timestamp
+#   to the current time.
+#     git-touch "Sat Feb 28 17:45:23 CST 2015"
+
+if [[ $# -ge 1 ]]
+then
+    date="$1"
+else
+    date="$(date)"
+fi
+
+git commit --amend --date="$date" -C HEAD
