@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# git-ls-ignore-index
+#   by Steven Elliott <selliott512@gmail.com>
+#
+# List all files, one per line, that are ignored, but are also in the index.
+# Normally files in the index should not be ignored, so output may be an
+# indication of a .gitignore bug.
+#
+# Examples:
+#   List all files that are ignored and are also in the index:
+#     git-ls-ignore-index
+
+# Globals
+
+bname="${0##*/}"
+tmp_dir="/tmp/$bname.$$"
+
+# Functions
+
+function cleanup()
+{
+    if [[ -n $opt_k ]]
+    then
+        return
+    fi
+    # Slightly safer than "rm -rf"
+    rm -f "$tmp_dir"/*
+    rmdir "$tmp_dir"
+}
+
+function usage()
+{
+    echo "Usage:"
+    echo "  $bname [-e] [-h] [-k] [-q]"
+    echo "    -e    exit non-zero if files are found"
+    echo "    -h    this help message"
+    echo "    -k    keep temporary files"
+    echo "    -q    quiet (no output)"
+}
+
+
+if ! mkdir -m 700 "$tmp_dir"
+then
+    echo "Could not create temporary directory \"$tmp_dir\"." 1>&2
+    exit 1
+fi
+trap cleanup EXIT
+
+opt_e=""
+opt_k=""
+opt_q=""
+while getopts "ehkq" opt
+do
+    case $opt in
+        e)
+            opt_e=t
+        ;;
+        h)
+            usage
+            exit 0
+        ;;
+        k)
+            opt_k=t
+        ;;
+        q)
+            opt_q=t
+        ;;
+        ?)
+            exec 1>&2
+            usage
+            exit 1
+        ;;
+    esac
+done
+shift $(($OPTIND - 1))
+
+# Get a list of files in the index.
+git ls-files > "$tmp_dir/index"
+mapfile -t index_ar < "$tmp_dir/index"
+
+# check-ignore does not have a feature to only see ignored files so excluded
+# files ("!") need to be grepped out.
+git check-ignore -v --no-index "${index_ar[@]}" | grep -vP ":\d+:!" \
+    | sed "s|^.*\t||g" | LC_ALL=C sort > "$tmp_dir/files"
+
+if [[ -z $opt_q ]]
+then
+    cat "$tmp_dir/files"
+fi
+
+if [[ (-n $opt_e) && (-s $tmp_dir/files) ]]
+then
+    exit 1
+fi
