@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# git-gc-all ver 0.9.0
+# git-gc-all
 #   by Sam Watkins
 #
 # Aggressively garbage collect unreferenced objects.  Caution, this deletes

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# git-discard-whitespace ver 0.9.0
+# git-discard-whitespace
 #   by Steven Elliott <selliott512@gmail.com>
 #
 # Discards whitespace changes in the working tree.  This script can be used

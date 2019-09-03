@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# git-combine-with-previous ver 0.9.0
+# git-combine-with-previous
 #   by Steven Elliott <selliott512@gmail.com>
 #
 # Combine second to last commit (HEAD~) with the last commit (HEAD) and use

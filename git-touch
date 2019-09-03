@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# git-touch ver 0.9.0
+# git-touch
 #   by Steven Elliott <selliott512@gmail.com>
 #
 # Sets both the author and commit timestamps for the commit at HEAD.  By

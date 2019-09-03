@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# git-deflate-object ver 0.9.0
+# git-deflate-object
 #   by Steven Elliott <selliott512@gmail.com>
 #
 # Applies the deflate algorithm to a git object and writes the result to.

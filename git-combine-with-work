@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# git-combine-with-work ver 0.9.0
+# git-combine-with-work
 #   by Steven Elliott <selliott512@gmail.com>
 #
 # This is like git-combine-with-previous except that a commit of modified
