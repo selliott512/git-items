@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# git-wt-clone
+#   by Steven Elliott
+#
+# Clone in a way that is suitable for git worktrees. The goal is to produce a
+# directory named after the indicated repository, similar to the way git clone
+# normally behaves, that contains a bare .git directory, with no checked out
+# files. In that directory, or in the .git directory, worktrees may be created
+# with a clean separation between user files, and git files. For example:
+#   git worktree add master
+# Initially there will be no local branches, so the new worktree will track
+# a branch by the same name on the remote if it exists.
+#
+# Examples:
+#  Clone into a directory that matches the repository specified:
+#    git-wt-clone git@some-host.com:my-repo.git
+
+die() {
+    echo "git-wt-clone: $*" >&2
+    exit 1
+}
+
+if [[ $# -lt 1 ]]
+then
+    die "usage: git wt-clone [clone-options] <repo>"
+fi
+
+repo="${!#}"
+clone_opts=("${@:1:$#-1}")
+
+repo_leaf="${repo##*/}"
+repo_leaf="${repo_leaf%/}"
+if [[ "$repo" == *:* && "$repo" != */* ]]
+then
+    repo_leaf="${repo_leaf##*:}"
+fi
+dir="${repo_leaf%.git}"
+if [[ -z "$dir" ]]
+then
+    die "could not determine target directory from repo '$repo'"
+fi
+
+if [[ -e "$dir" ]]
+then
+    die "target directory '$dir' already exists"
+fi
+
+mkdir "$dir" || die "failed to create directory '$dir'"
+cd "$dir" || die "failed to enter directory '$dir'"
+git clone --bare --single-branch \
+  --config remote.origin.fetch="+refs/heads/*:refs/remotes/origin/*" \
+  "${clone_opts[@]}" \
+  "$repo" .git || die "git clone failed"
+
+current_branch="$(git symbolic-ref --quiet --short HEAD)"
+if [[ -n "$current_branch" ]]
+then
+    # Remove the default local branch so worktrees start from remote branches.
+    git branch -D "$current_branch" || die "failed to delete branch '$current_branch'"
+fi
+
+git fetch || die "git fetch failed"
