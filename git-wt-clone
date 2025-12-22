@@ -15,6 +15,10 @@
 # Examples:
 #  Clone into a directory that matches the repository specified:
 #    git-wt-clone git@some-host.com:my-repo.git
+#  Create multiple worktrees on clone:
+#    git-wt-clone -b main -b dev git@some-host.com:my-repo.git
+#  Clone without creating any worktrees:
+#    git-wt-clone -n git@some-host.com:my-repo.git
 
 die() {
     echo "git-wt-clone: $*" >&2
@@ -23,11 +27,41 @@ die() {
 
 if [[ $# -lt 1 ]]
 then
-    die "usage: git wt-clone [clone-options] <repo>"
+    die "usage: git wt-clone [-b <branch>]... [-n] [clone-options] <repo>"
 fi
 
 repo="${!#}"
-clone_opts=("${@:1:$#-1}")
+args=("${@:1:$#-1}")
+branches=()
+no_worktrees=0
+clone_opts=()
+for ((i=0; i<${#args[@]}; i++))
+do
+    arg="${args[i]}"
+    if [[ "$arg" == "--" ]]
+    then
+        clone_opts+=("${args[@]:i}")
+        break
+    elif [[ "$arg" == "-b" || "$arg" == "--branch" ]]
+    then
+        ((i++))
+        branch="${args[i]}"
+        if [[ -z "$branch" ]]
+        then
+            die "missing branch for $arg"
+        fi
+        branches+=("$branch")
+    elif [[ "$arg" == "-n" || "$arg" == "--no-checkout" ]]
+    then
+        no_worktrees=1
+    else
+        clone_opts+=("$arg")
+    fi
+done
+if [[ $no_worktrees -eq 1 && ${#branches[@]} -gt 0 ]]
+then
+    die "cannot combine -n with -b"
+fi
 
 repo_leaf="${repo##*/}"
 repo_leaf="${repo_leaf%/}"
@@ -54,6 +88,7 @@ git clone --bare --single-branch \
   "$repo" .git || die "git clone failed"
 
 current_branch="$(git symbolic-ref --quiet --short HEAD)"
+default_branch="$current_branch"
 if [[ -n "$current_branch" ]]
 then
     # Remove the default local branch so worktrees start from remote branches.
@@ -61,3 +96,19 @@ then
 fi
 
 git fetch || die "git fetch failed"
+
+if [[ $no_worktrees -eq 0 ]]
+then
+    if [[ ${#branches[@]} -eq 0 ]]
+    then
+        if [[ -z "$default_branch" ]]
+        then
+            die "no default branch; use -b or -n"
+        fi
+        branches=("$default_branch")
+    fi
+    for branch in "${branches[@]}"
+    do
+        git worktree add --guess-remote "$branch" || die "failed to add worktree '$branch'"
+    done
+fi
