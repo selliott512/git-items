@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # git-wt-clone
-#   by Steven Elliott
+#   by Steven Elliott with Codex assistance
 #
 # Clone in a way that is suitable for git worktrees. The goal is to produce a
 # directory named after the indicated repository, similar to the way git clone
@@ -11,6 +11,13 @@
 #   git worktree add master
 # Initially there will be no local branches, so the new worktree will track
 # a branch by the same name on the remote if it exists.
+#
+# Since completion for wt-clone is very simliar to clone it's possible to use
+# the same bash completion. Run the followig directly, or add it somewhere
+# in /etc/bash_completion.d:
+#   _git_wt_clone() {
+#     _git_clone;
+#   }
 #
 # Examples:
 #  Clone into a directory that matches the repository specified:
